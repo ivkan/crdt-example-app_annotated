@@ -106,17 +106,6 @@ function saveActiveElement() {
     : null;
 }
 
-function restoreActiveElement() {
-  if (_activeElement) {
-    let elements = qsa(_activeElement);
-    // Cheap focus management: only re-focus if there's a single
-    // element, otherwise we don't know which one was focused
-    if (elements.length === 1) {
-      elements[0].focus();
-    }
-  }
-}
-
 function renderTodoTypes({ className = '', showBlank } = {}) {
   return `
     <select class="${className} mr-2 bg-transparent shadow border border-gray-300">
@@ -277,7 +266,6 @@ function render() {
 
   addEventHandlers();
   restoreScroll();
-  restoreActiveElement();
 }
 
 function addEventHandlers() {
