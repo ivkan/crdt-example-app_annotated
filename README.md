@@ -27,14 +27,11 @@ Links:
 
 ## How to Run
 
-You can just open `client/index.html` in a browser (i.e., access via `file://` URI). Alternatively, you can serve it from a web server (e.g., `npx serve` and open `http://localhost:5000/client/`).
+You can run a web server (e.g., `pnpm serve` and open `http://localhost:3333/`).
 
 By default, the UI will sync with the data hosted at `https://crdt.jlongster.com/server/sync`. See instructions below for syncing with your own local server.
 
 ### Optional: Run the server to sync with your own database
 
-1. `yarn install`
-2. `./run` to start the server (this will create `server/db.sqlite`).
-3. Open `server/db.sqlite` in a SQLite client and run `server/init.sql` to create the schema.
-4. Modify the UI to sync with your local server: edit `client/sync.js:post()` to use `http://localhost:8006/sync` instead of `https://crdt.jlongster.com/server/sync`.
-    
+1. `pnpm install`
+2. `pnpm serve` to start the server (this will create `server/db.sqlite`) and open `http://localhost:3333/`.

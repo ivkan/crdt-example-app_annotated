@@ -2,10 +2,29 @@ let express = require('express');
 let sqlite3 = require('better-sqlite3');
 let bodyParser = require('body-parser');
 let cors = require('cors');
-let { Timestamp } = require('../shared/timestamp');
-let merkle = require('../shared/merkle');
+let { Timestamp } = require('./client/shared/timestamp');
+let merkle = require('./client/shared/merkle');
 
 let db = sqlite3(__dirname + '/db.sqlite');
+db.exec(
+  `create table if not exists messages
+   (
+       timestamp TEXT,
+       group_id  TEXT,
+       dataset   TEXT,
+       row       TEXT,
+       column    TEXT,
+       value     TEXT,
+       PRIMARY KEY (timestamp, group_id)
+   );
+
+  CREATE TABLE if not exists messages_merkles
+  (
+      group_id TEXT PRIMARY KEY,
+      merkle   TEXT
+  );`,
+);
+
 let app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '20mb' }));
@@ -48,7 +67,7 @@ function deserializeValue(value) {
 
 function getMerkle(group_id) {
   let rows = queryAll('SELECT * FROM messages_merkles WHERE group_id = ?', [
-    group_id
+    group_id,
   ]);
 
   if (rows.length > 0) {
@@ -70,9 +89,10 @@ function addMessages(groupId, messages) {
       const { dataset, row, column, value, timestamp } = message;
 
       let res = queryRun(
-        `INSERT OR IGNORE INTO messages (timestamp, group_id, dataset, row, column, value) VALUES
-          (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
-        [timestamp, groupId, dataset, row, column, serializeValue(value)]
+        `INSERT OR IGNORE INTO messages (timestamp, group_id, dataset, row, column, value)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT DO NOTHING`,
+        [timestamp, groupId, dataset, row, column, serializeValue(value)],
       );
 
       if (res.changes === 1) {
@@ -83,7 +103,7 @@ function addMessages(groupId, messages) {
 
     queryRun(
       'INSERT OR REPLACE INTO messages_merkles (group_id, merkle) VALUES (?, ?)',
-      [groupId, JSON.stringify(trie)]
+      [groupId, JSON.stringify(trie)],
     );
     queryRun('COMMIT');
   } catch (e) {
@@ -109,13 +129,18 @@ app.post('/sync', (req, res) => {
     if (diffTime) {
       let timestamp = new Timestamp(diffTime, 0, '0').toString();
       newMessages = queryAll(
-        `SELECT * FROM messages WHERE group_id = ? AND timestamp > ? AND timestamp NOT LIKE '%' || ? ORDER BY timestamp`,
-        [group_id, timestamp, client_id]
+        `SELECT *
+         FROM messages
+         WHERE group_id = ?
+           AND timestamp > ?
+           AND timestamp NOT LIKE '%' || ?
+         ORDER BY timestamp`,
+        [group_id, timestamp, client_id],
       );
 
       newMessages = newMessages.map(msg => ({
         ...msg,
-        value: deserializeValue(msg.value)
+        value: deserializeValue(msg.value),
       }));
     }
   }
@@ -123,8 +148,8 @@ app.post('/sync', (req, res) => {
   res.send(
     JSON.stringify({
       status: 'ok',
-      data: { messages: newMessages, merkle: trie }
-    })
+      data: { messages: newMessages, merkle: trie },
+    }),
   );
 });
 
